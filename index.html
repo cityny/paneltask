@@ -12,13 +12,12 @@
 <button class="icon-btn primary" onclick="abrirModalNueva()" data-tip="Nueva tarea">＋</button>
 <button class="icon-btn orange" onclick="exportarJSON()" data-tip="Exportar respaldo">⬇</button>
 <button class="icon-btn orange" onclick="document.getElementById('fileImport').click()" data-tip="Importar respaldo">⬆</button>
-<button class="icon-btn" id="btnSelectAll" onclick="toggleSeleccionTodas()" data-tip="Seleccionar todas">☐</button>
-<button class="icon-btn" id="btnDeleteSel" onclick="borrarSeleccionadas()" data-tip="Eliminar seleccionadas" style="display:none;background:#dc2626;color:#fff">🗑</button>
+
 <input type="file" id="fileImport" accept=".json" style="display:none" onchange="importarJSON(event)">
 </header>
 <div class="layout">
 <aside class="sidebar" id="sidebar">
-<div class="sidebar-head"><h2>Sin asignar</h2><span class="count" id="countSinAsignar">0</span><input type="checkbox" id="chkAllSidebar" onchange="toggleSeleccionTodas()" style="margin-left:8px;cursor:pointer" title="Seleccionar todas"></div>
+<div class="sidebar-head"><h2>Sin asignar</h2><span class="count" id="countSinAsignar">0</span><input type="checkbox" id="chkAllSidebar" onchange="toggleSeleccionTodas()" style="margin-left:8px;cursor:pointer" title="Seleccionar todas"><button class="icon-btn" id="btnDeleteSel" onclick="borrarSeleccionadas()" data-tip="Eliminar seleccionadas" style="display:none;background:#dc2626;color:#fff;margin-left:auto;width:28px;height:28px;font-size:13px">🗑</button></div>
 <div class="search"><input id="search" placeholder="Buscar tarea..." oninput="renderLista()"></div>
 <div class="task-list" id="lista"></div>
 </aside>
