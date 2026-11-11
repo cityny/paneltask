@@ -86,6 +86,10 @@ function actualizarBotonesSel(){
   const b1=document.getElementById('btnSelectAll');const b2=document.getElementById('btnDeleteSel');
   if(b1)b1.textContent=seleccionadas.size>0?'☑':'☐';
   if(b2)b2.style.display=seleccionadas.size>0?'inline-flex':'none';
+  const visibles=tareas.filter(function(t){return !t.fecha&&t.hora===null&&t.dia===null;});
+  const todas=visibles.length>0&&visibles.every(function(t){return seleccionadas.has(t.id);});
+  const chk=document.getElementById('chkAllSidebar');
+  if(chk){chk.checked=todas;chk.indeterminate=!todas&&seleccionadas.size>0;}
 }
 async function borrarSeleccionadas(){
   if(seleccionadas.size===0)return;
