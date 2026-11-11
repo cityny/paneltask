@@ -16,7 +16,59 @@ async function cargarTareasDesdeBaserow(){try{let next=BASEROW_BASE+'?user_field
 function payloadDeTarea(t){return{nombre:t.nombre,categoria:t.cat||'',estado:t.estado,avance:Math.max(0,Math.min(100,Number(t.avance)||0)),comentario:t.comentario||'',fecha:t.fecha||null,dia:t.dia!==null?Math.max(0,Math.min(6,t.dia)):null,hora:t.hora||null,id_tarea:t.id};}
 async function crearTareaEnBaserow(t){const d=await baserowFetch(BASEROW_BASE+'?user_field_names=true',{method:'POST',body:JSON.stringify(payloadDeTarea(t))});return d.id;}
 async function actualizarTareaEnBaserow(t){if(!t.baserowId){t.baserowId=await crearTareaEnBaserow(t);return;}const p=payloadDeTarea(t);delete p.id_tarea;await baserowFetch(BASEROW_BASE+t.baserowId+'/?user_field_names=true',{method:'PATCH',body:JSON.stringify(p)});}
-async function eliminarTareaEnBaserow(t){if(!t.baserowId)return;await baserowFetch(BASEROW_BASE+t.baserowId+'/',{method:'DELETE'});}async function importarHaciaBaserow(lista){mostrarToast('Importando '+lista.length+' tareas...');let ok=0;for(let i=0;i<lista.length;i++){const raw=lista[i];try{let dia=normalizarDia(raw.dia);let fecha=normalizarFecha(raw.fecha);if(!fecha&&dia!==null)fecha=toISO(fechaDeDia(dia));const t={id:raw.id||('t'+Date.now()+'_'+ok),nombre:raw.nombre||raw.name||'',cat:raw.cat||raw.categoria||'',estado:raw.estado||'sininiciar',avance:raw.avance||0,comentario:raw.comentario||'',fecha:fecha,dia:dia,hora:normalizarHora(raw.hora)};t.baserowId=await crearTareaEnBaserow(t);tareas.push(t);ok++;}catch(err){console.error('Error:',raw.nombre,err);}}renderTodo();mostrarToast('Importadas '+ok+'/'+lista.length);}
+async function eliminarTareaEnBaserow(t){if(!t.baserowId)return;await baserowFetch(BASEROW_BASE+t.baserowId+'/',{method:'DELETE'});}async function buscarTareaPorId(idTarea){
+  try{
+    const url=BASEROW_BASE+'?user_field_names=true&filter__id_tarea__equal='+encodeURIComponent(idTarea)+'&size=1';
+    const d=await baserowFetch(url);
+    return (d.results&&d.results.length>0)?d.results[0]:null;
+  }catch(e){return null;}
+}
+async function importarHaciaBaserow(lista){
+  const progreso=document.getElementById('importProgress');
+  const barra=document.getElementById('importBar');
+  const texto=document.getElementById('importText');
+  function setProgreso(hechas,total,msg){
+    if(!progreso)return;
+    progreso.style.display='block';
+    const pct=total>0?Math.round(hechas*100/total):0;
+    if(barra)barra.style.width=pct+'%';
+    if(texto)texto.textContent=(msg||'Importando')+' '+hechas+'/'+total+' ('+pct+'%)';
+  }
+  function ocultarProgreso(){if(progreso)progreso.style.display='none';}
+  setProgreso(0,lista.length,'Importando');
+  let creadas=0,actualizadas=0,errores=0;
+  for(let i=0;i<lista.length;i++){
+    const raw=lista[i];
+    try{
+      let dia=normalizarDia(raw.dia);
+      let fecha=normalizarFecha(raw.fecha);
+      if(!fecha&&dia!==null)fecha=toISO(fechaDeDia(dia));
+      const idT=raw.id||('t'+Date.now()+'_'+i);
+      const t={id:idT,nombre:raw.nombre||raw.name||'',cat:raw.cat||raw.categoria||'',estado:raw.estado||'sininiciar',avance:raw.avance||0,comentario:raw.comentario||'',fecha:fecha,dia:dia,hora:normalizarHora(raw.hora)};
+      const existente=await buscarTareaPorId(idT);
+      if(existente){
+        t.baserowId=existente.id;
+        await actualizarTareaEnBaserow(t);
+        const idx=tareas.findIndex(function(x){return x.id===idT;});
+        if(idx>=0)tareas[idx]=t;else tareas.push(t);
+        actualizadas++;
+      }else{
+        t.baserowId=await crearTareaEnBaserow(t);
+        tareas.push(t);
+        creadas++;
+      }
+    }catch(err){
+      console.error('Error importando:',raw.nombre||raw.id,err);
+      errores++;
+    }
+    setProgreso(i+1,lista.length,'Importando');
+    if(i%5===4)await new Promise(function(r){setTimeout(r,0);});
+  }
+  renderTodo();
+  setProgreso(lista.length,lista.length,'Completado');
+  setTimeout(ocultarProgreso,1500);
+  mostrarToast('Importación: '+creadas+' nuevas, '+actualizadas+' actualizadas, '+errores+' errores');
+}
 function toggleSidebar(){const s=document.getElementById('sidebar');if(s)s.classList.toggle('hidden');}
 function configurarDropSidebar(){const s=document.getElementById('sidebar');if(!s)return;s.addEventListener('dragover',function(e){e.preventDefault();e.stopPropagation();s.classList.add('drop-target');});s.addEventListener('dragleave',function(e){if(!s.contains(e.relatedTarget))s.classList.remove('drop-target');});s.addEventListener('drop',async function(e){e.preventDefault();e.stopPropagation();s.classList.remove('drop-target');const id=e.dataTransfer.getData('text/plain');const t=tareas.find(function(x){return x.id===id;});if(!t)return;if(t.dia===null&&t.hora===null&&t.fecha===null)return;t.dia=null;t.hora=null;t.fecha=null;renderTodo();mostrarToast('Tarea devuelta a la lista');try{await actualizarTareaEnBaserow(t);}catch(err){console.error(err);mostrarToast('Cambio local, no guardado');}});}
 function renderLista(){const c=document.getElementById('lista');if(!c)return;const el=document.getElementById('search');const f=(el?el.value:'').toLowerCase();c.innerHTML='';const s=tareas.filter(function(t){return !t.fecha&&t.hora===null&&t.dia===null;}).filter(function(t){return !f||t.nombre.toLowerCase().indexOf(f)!==-1||(t.cat||'').toLowerCase().indexOf(f)!==-1;});const n=document.getElementById('countSinAsignar');if(n)n.textContent=s.length;if(cargando){c.innerHTML='<p style="font-size:11px;color:#9ca3af;text-align:center;padding:20px">Cargando...</p>';return;}if(s.length===0){c.innerHTML='<p style="font-size:11px;color:#9ca3af;text-align:center;padding:20px">'+(f?'Sin resultados.':'No hay tareas.')+'</p>';return;}s.forEach(function(t){const d=document.createElement('div');d.className='task-card';d.draggable=true;d.dataset.id=t.id;d.dataset.status=t.estado;d.innerHTML='<div class="cat">'+(t.cat||'General')+'</div><div class="name">'+t.nombre+'</div><div class="meta">'+t.estado+' · '+t.avance+'%</div>';d.addEventListener('dragstart',function(e){e.dataTransfer.setData('text/plain',t.id);});d.addEventListener('dblclick',function(){abrirModalEdicion(t.id);});c.appendChild(d);});}function renderCalendario(){const th=document.getElementById('theadRow');const tb=document.getElementById('tbody');const wl=document.getElementById('weekLabel');if(!th||!tb||!wl)return;th.innerHTML='';const hh=document.createElement('th');hh.className='hour-col';hh.textContent='Hora';th.appendChild(hh);const fs=DIAS.map(function(_,i){return fechaDeDia(i);});DIAS.forEach(function(d,i){const f=fs[i];const el=document.createElement('th');if(esHoy(f))el.classList.add('today');el.title='Clic para copiar tareas del día';el.innerHTML='<div class="day-name">'+d+'</div><div class="day-date">'+f.getDate()+'-'+MESES[f.getMonth()]+'-'+f.getFullYear()+'</div>';el.addEventListener('click',function(){copiarDia(i);});th.appendChild(el);});const fi=fs[0],ff=fs[6];wl.textContent=fi.getDate()+'-'+MESES[fi.getMonth()]+' → '+ff.getDate()+'-'+MESES[ff.getMonth()]+'-'+ff.getFullYear();tb.innerHTML='';HORAS.forEach(function(h){const tr=document.createElement('tr');const tdH=document.createElement('td');tdH.className='hour';tdH.textContent=h;tr.appendChild(tdH);fs.forEach(function(fc,idx){const iso=toISO(fc);const td=document.createElement('td');td.className='slot';td.dataset.fecha=iso;td.dataset.dia=idx;td.dataset.hora=h;tareas.filter(function(t){return t.fecha===iso&&t.hora===h;}).forEach(function(t){const ch=document.createElement('div');ch.className='slot-task';ch.dataset.status=t.estado;ch.draggable=true;ch.dataset.id=t.id;ch.textContent=t.nombre;ch.title=t.nombre+'\nEstado: '+t.estado+'\nAvance: '+t.avance+'%\n'+(t.comentario||'');ch.addEventListener('dragstart',function(e){e.dataTransfer.setData('text/plain',t.id);});ch.addEventListener('dblclick',function(){abrirModalEdicion(t.id);});td.appendChild(ch);});td.addEventListener('dragover',function(e){e.preventDefault();td.classList.add('dragover');});td.addEventListener('dragleave',function(){td.classList.remove('dragover');});td.addEventListener('drop',async function(e){e.preventDefault();e.stopPropagation();td.classList.remove('dragover');const id=e.dataTransfer.getData('text/plain');const t=tareas.find(function(x){return x.id===id;});if(!t)return;t.fecha=td.dataset.fecha;t.hora=td.dataset.hora;t.dia=parseInt(td.dataset.dia);renderTodo();try{await actualizarTareaEnBaserow(t);}catch(err){console.error(err);mostrarToast('Cambio local, no guardado');}});tr.appendChild(td);});tb.appendChild(tr);});}
