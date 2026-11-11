@@ -12,6 +12,8 @@
 <button class="icon-btn primary" onclick="abrirModalNueva()" data-tip="Nueva tarea">＋</button>
 <button class="icon-btn orange" onclick="exportarJSON()" data-tip="Exportar respaldo">⬇</button>
 <button class="icon-btn orange" onclick="document.getElementById('fileImport').click()" data-tip="Importar respaldo">⬆</button>
+<button class="icon-btn" id="btnSelectAll" onclick="toggleSeleccionTodas()" data-tip="Seleccionar todas">☐</button>
+<button class="icon-btn" id="btnDeleteSel" onclick="borrarSeleccionadas()" data-tip="Eliminar seleccionadas" style="display:none;background:#dc2626;color:#fff">🗑</button>
 <input type="file" id="fileImport" accept=".json" style="display:none" onchange="importarJSON(event)">
 </header>
 <div class="layout">
