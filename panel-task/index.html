@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Panel de Tareas</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+<button class="icon-btn" onclick="toggleSidebar()" data-tip="Mostrar/ocultar lista">☰</button>
+<h1>Panel de Tareas</h1>
+<button class="icon-btn primary" onclick="abrirModalNueva()" data-tip="Nueva tarea">＋</button>
+<button class="icon-btn orange" onclick="exportarJSON()" data-tip="Exportar respaldo">⬇</button>
+<button class="icon-btn orange" onclick="document.getElementById('fileImport').click()" data-tip="Importar respaldo">⬆</button>
+<input type="file" id="fileImport" accept=".json" style="display:none" onchange="importarJSON(event)">
+</header>
+<div class="layout">
+<aside class="sidebar" id="sidebar">
+<div class="sidebar-head"><h2>Sin asignar</h2><span class="count" id="countSinAsignar">0</span></div>
+<div class="search"><input id="search" placeholder="Buscar tarea..." oninput="renderLista()"></div>
+<div class="task-list" id="lista"></div>
+</aside>
+<main class="calendar-wrap">
+<div class="week-nav">
+<button class="icon-btn" onclick="cambiarSemana(-1)" data-tip="Semana anterior">◀</button>
+<span class="label" id="weekLabel"></span>
+<button class="icon-btn" onclick="cambiarSemana(1)" data-tip="Semana siguiente">▶</button>
+<span style="flex:1"></span>
+<button class="icon-btn" onclick="irHoy()" data-tip="Ir a la semana actual">⌂</button>
+</div>
+<table class="cal"><thead><tr id="theadRow"></tr></thead><tbody id="tbody"></tbody></table>
+</main>
+</div>
+<div class="modal-bg" id="modalBg">
+<div class="modal">
+<h3 id="modalTitle">Tarea</h3>
+<label>Nombre</label><input id="inpNombre">
+<label>Categoría</label><input id="inpCat" placeholder="Ej: Pagos, Obra...">
+<label>Estado</label><select id="inpEstado"><option value="sininiciar">Sin iniciar</option><option value="pendiente">Pendiente</option><option value="completada">Completada</option><option value="cancelada">Cancelada</option></select>
+<label>% Avance</label><input id="inpAvance" type="number" min="0" max="100" value="0">
+<label>Comentario</label><textarea id="inpComentario"></textarea>
+<div class="actions"><button class="btn-del" onclick="borrarTarea()">Eliminar</button><button class="btn-cancel" onclick="cerrarModal()">Cancelar</button><button class="btn-save" onclick="guardarTarea()">Guardar</button></div>
+</div>
+</div>
+<div class="toast" id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>
